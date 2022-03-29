@@ -1,0 +1,511 @@
+{
+ "cells": [
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "## Assignment"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 1,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "# Import \n",
+    "\n",
+    "import numpy as np\n",
+    "import matplotlib.pyplot as plt\n",
+    "'''\n",
+    "    :param p_k1: position of King 1\n",
+    "    :param p_k2: position of King 2\n",
+    "    :param p_q1: position of Queen\n",
+    "    :param s: board\n",
+    "'''\n",
+    "from degree_freedom_queen import *\n",
+    "# return: dfQ1: Degrees of Freedom of the Queen, a_q1: Allowed actions for the Queen, dfQ1_: Squares the Queen is threatening\n",
+    "from degree_freedom_king1 import *\n",
+    "# return: dfK1: Degrees of Freedom of King 1, a_k1: Allowed actions for King 1, dfK1_: Squares the King1 is threatening\n",
+    "from degree_freedom_king2 import *\n",
+    "# return: dfK2: Degrees of freedom for King 2, a_k2: allowed actions for King 2, check: 1 if it is checked, -1 if not\n",
+    "\n",
+    "from generate_game import *\n",
+    "'''\n",
+    "This function creates a new chess game with three pieces at random locations. \n",
+    "The enemy King has no interaction with our King and Queen. Positions range from 0 to 4\n",
+    "    :param size_board:\n",
+    "    :return:\n",
+    "'''\n",
+    "\n",
+    "from Chess_env import *\n",
+    "\n",
+    "\n",
+    "size_board = 4"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {
+    "execution": {
+     "iopub.execute_input": "2022-03-18T17:06:37.489751Z",
+     "iopub.status.busy": "2022-03-18T17:06:37.489286Z",
+     "iopub.status.idle": "2022-03-18T17:06:37.494050Z",
+     "shell.execute_reply": "2022-03-18T17:06:37.493319Z",
+     "shell.execute_reply.started": "2022-03-18T17:06:37.489712Z"
+    }
+   },
+   "source": [
+    "## The Environment\n",
+    "\n",
+    "You can find the environment in the file Chess_env, which contains the class Chess_env. To define an object, you need to provide the board size considered as input. In our example, size_board=4. \n",
+    "Chess_env is composed by the following methods:\n",
+    "\n",
+    "1. Initialise_game. The method initialises an episode by placing the three pieces considered (Agent's king and queen, enemy's king) in the chess board. The outputs of the method are described below in order.\n",
+    "\n",
+    "     S $\\;$ A matrix representing the board locations filled with 4 numbers: 0, no piece in that position; 1, location of the \n",
+    "     agent's king; 2 location of the queen; 3 location of the enemy king.\n",
+    "     \n",
+    "     X $\\;$ The features, that is the input to the neural network. See the assignment for more information regarding the            definition of the features adopted. To personalise this, go into the Features method of the class Chess_env() and change        accordingly.\n",
+    "     \n",
+    "     allowed_a $\\;$ The allowed actions that the agent can make. The agent is moving a king, with a total number of 8                possible actions, and a queen, with a total number of $(board_{size}-1)\\times 8$ actions. The total number of possible actions correspond      to the sum of the two, but not all actions are allowed in a given position (movements to locations outside the borders or      against chess rules). Thus, the variable allowed_a is a vector that is one (zero) for an action that the agent can (can't)      make. Be careful, apply the policy considered on the actions that are allowed only.\n",
+    "     \n",
+    "\n",
+    "2. OneStep. The method performs a one step update of the system. Given as input the action selected by the agent, it updates the chess board by performing that action and the response of the enemy king (which is a random allowed action in the settings considered). The first three outputs are the same as for the Initialise_game method, but the variables are computed for the position reached after the update of the system. The fourth and fifth outputs are:\n",
+    "\n",
+    "     R $\\;$ The reward. To change this, look at the OneStep method of the class where the rewards are set.\n",
+    "     \n",
+    "     Done $\\;$ A variable that is 1 if the episode has ended (checkmate or draw).\n",
+    "     \n",
+    "     \n",
+    "3. Features. Given the chessboard position, the method computes the features.\n",
+    "\n",
+    "This information and a quick analysis of the class should be all you need to get going. The other functions that the class exploits are uncommented and constitute an example on how not to write a python code. You can take a look at them if you want, but it is not necessary.\n",
+    "\n",
+    "\n",
+    "\n",
+    "\n"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 2,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "## INITIALISE THE ENVIRONMENT\n",
+    "\n",
+    "env=Chess_Env(size_board)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 3,
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "[[0 0 3 0]\n",
+      " [0 0 0 0]\n",
+      " [0 0 1 0]\n",
+      " [0 2 0 0]]\n",
+      "check?  0\n",
+      "dofk2  1\n",
+      "\n",
+      "[[0 3 0 0]\n",
+      " [0 0 0 0]\n",
+      " [2 0 1 0]\n",
+      " [0 0 0 0]]\n",
+      "0  0\n",
+      "check?  0\n",
+      "dofk2  0\n",
+      "\n",
+      "[[0 3 0 0]\n",
+      " [0 0 0 1]\n",
+      " [2 0 0 0]\n",
+      " [0 0 0 0]]\n",
+      "0.0  1\n",
+      "check?  0\n",
+      "dofk2  0\n"
+     ]
+    }
+   ],
+   "source": [
+    "## PRINT 5 STEPS OF AN EPISODE CONSIDERING A RANDOM AGENT\n",
+    "\n",
+    "S,X,allowed_a=env.Initialise_game()                       # INTIALISE GAME\n",
+    "\n",
+    "print(S)                                                  # PRINT CHESS BOARD (SEE THE DESCRIPTION ABOVE)\n",
+    "\n",
+    "print('check? ',env.check)                                # PRINT VARIABLE THAT TELLS IF ENEMY KING IS IN CHECK (1) OR NOT (0)\n",
+    "print('dofk2 ',np.sum(env.dfk2_constrain).astype(int))    # PRINT THE NUMBER OF LOCATIONS THAT THE ENEMY KING CAN MOVE TO\n",
+    "\n",
+    "\n",
+    "for i in range(5):\n",
+    "    \n",
+    "    a,_=np.where(allowed_a==1)                  # FIND WHAT THE ALLOWED ACTIONS ARE\n",
+    "    a_agent=np.random.permutation(a)[0]         # MAKE A RANDOM ACTION\n",
+    "\n",
+    "    S,X,allowed_a,R,Done=env.OneStep(a_agent)   # UPDATE THE ENVIRONMENT\n",
+    "    \n",
+    "    \n",
+    "    ## PRINT CHESS BOARD AND VARIABLES\n",
+    "    print('')\n",
+    "    print(S)\n",
+    "    print(R,'', Done)\n",
+    "    print('check? ',env.check)\n",
+    "    print('dofk2 ',np.sum(env.dfk2_constrain).astype(int))\n",
+    "    \n",
+    "    \n",
+    "    # TERMINATE THE EPISODE IF Done=True (DRAW OR CHECKMATE)\n",
+    "    if Done:\n",
+    "        break\n",
+    "        \n"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 4,
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "Random_Agent, Average reward: 0.183 Number of steps:  7.505\n"
+     ]
+    }
+   ],
+   "source": [
+    "# PERFORM N_episodes=1000 EPISODES MAKING RANDOM ACTIONS AND COMPUTE THE AVERAGE REWARD AND NUMBER OF MOVES \n",
+    "\n",
+    "S,X,allowed_a=env.Initialise_game()\n",
+    "N_episodes=1000\n",
+    "\n",
+    "# VARIABLES WHERE TO SAVE THE FINAL REWARD IN AN EPISODE AND THE NUMBER OF MOVES \n",
+    "R_save_random = np.zeros([N_episodes, 1])\n",
+    "N_moves_save_random = np.zeros([N_episodes, 1])\n",
+    "\n",
+    "for n in range(N_episodes):\n",
+    "    \n",
+    "    S,X,allowed_a=env.Initialise_game()     # INITIALISE GAME\n",
+    "    Done=0                                  # SET Done=0 AT THE BEGINNING\n",
+    "    i=1                                     # COUNTER FOR THE NUMBER OF ACTIONS (MOVES) IN AN EPISODE\n",
+    "    \n",
+    "    # UNTIL THE EPISODE IS NOT OVER...(Done=0)\n",
+    "    while Done==0:\n",
+    "        \n",
+    "        # SAME AS THE CELL BEFORE, BUT SAVING THE RESULTS WHEN THE EPISODE TERMINATES \n",
+    "        \n",
+    "        a,_=np.where(allowed_a==1)\n",
+    "        a_agent=np.random.permutation(a)[0]\n",
+    "\n",
+    "        S,X,allowed_a,R,Done=env.OneStep(a_agent)\n",
+    "        \n",
+    "        \n",
+    "        if Done:\n",
+    "            \n",
+    "            R_save_random[n]=np.copy(R)\n",
+    "            N_moves_save_random[n]=np.copy(i)\n",
+    "\n",
+    "            break\n",
+    "\n",
+    "        i=i+1                               # UPDATE THE COUNTER\n",
+    "\n",
+    "\n",
+    "\n",
+    "# AS YOU SEE, THE PERFORMANCE OF A RANDOM AGENT ARE NOT GREAT, SINCE THE MAJORITY OF THE POSITIONS END WITH A DRAW \n",
+    "# (THE ENEMY KING IS NOT IN CHECK AND CAN'T MOVE)\n",
+    "\n",
+    "print('Random_Agent, Average reward:',np.mean(R_save_random),'Number of steps: ',np.mean(N_moves_save_random))\n",
+    "\n"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 8,
+   "metadata": {
+    "execution": {
+     "iopub.execute_input": "2022-03-18T17:09:40.605553Z",
+     "iopub.status.busy": "2022-03-18T17:09:40.605299Z",
+     "iopub.status.idle": "2022-03-18T17:09:40.620591Z",
+     "shell.execute_reply": "2022-03-18T17:09:40.618405Z",
+     "shell.execute_reply.started": "2022-03-18T17:09:40.605523Z"
+    }
+   },
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "32 200 58\n"
+     ]
+    }
+   ],
+   "source": [
+    "# INITIALISE THE PARAMETERS OF YOUR NEURAL NETWORK AND...\n",
+    "# PLEASE CONSIDER TO USE A MASK OF ONE FOR THE ACTION MADE AND ZERO OTHERWISE IF YOU ARE NOT USING VANILLA GRADIENT DESCENT...\n",
+    "# WE SUGGEST A NETWORK WITH ONE HIDDEN LAYER WITH SIZE 200. \n",
+    "\n",
+    "\n",
+    "S,X,allowed_a=env.Initialise_game()\n",
+    "N_a=np.shape(allowed_a)[0]   # TOTAL NUMBER OF POSSIBLE ACTIONS\n",
+    "\n",
+    "N_in=np.shape(X)[0]    ## INPUT SIZE\n",
+    "N_h=200                ## NUMBER OF HIDDEN NODES\n",
+    "\n",
+    "\n",
+    "## INITALISE YOUR NEURAL NETWORK...\n",
+    "print(N_a,N_h,N_in)\n",
+    "#weights\n",
+    "import numpy.matlib\n",
+    "W1=np.random.uniform(0,1,(N_h,N_in))\n",
+    "W1=np.divide(W1,np.matlib.repmat(np.sum(W1,1)[:,None],1,N_in))\n",
+    "W2=np.random.uniform(0,1,(N_a,N_h))\n",
+    "W2=np.divide(W2,np.matlib.repmat(np.sum(W2,1)[:,None],1,N_h))\n",
+    "#bias\n",
+    "bias_W1=np.zeros((N_h,))\n",
+    "bias_W2=np.zeros((N_a,))\n",
+    "\n",
+    "\n",
+    "# HYPERPARAMETERS SUGGESTED (FOR A GRID SIZE OF 4)\n",
+    "\n",
+    "epsilon_0 = 0.2     # STARTING VALUE OF EPSILON FOR THE EPSILON-GREEDY POLICY\n",
+    "beta = 0.00005      # THE PARAMETER SETS HOW QUICKLY THE VALUE OF EPSILON IS DECAYING (SEE epsilon_f BELOW)\n",
+    "gamma = 0.85        # THE DISCOUNT FACTOR\n",
+    "eta = 0.0035        # THE LEARNING RATE\n",
+    "\n",
+    "N_episodes = 100000 # THE NUMBER OF GAMES TO BE PLAYED \n",
+    "# N_episodes = 10000\n",
+    "\n",
+    "# SAVING VARIABLES\n",
+    "R_save = np.zeros([N_episodes, 1])\n",
+    "N_moves_save = np.zeros([N_episodes, 1])\n"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 5,
+   "metadata": {
+    "execution": {
+     "iopub.execute_input": "2022-03-18T17:07:09.237798Z",
+     "iopub.status.busy": "2022-03-18T17:07:09.237533Z",
+     "iopub.status.idle": "2022-03-18T17:07:09.245701Z",
+     "shell.execute_reply": "2022-03-18T17:07:09.245033Z",
+     "shell.execute_reply.started": "2022-03-18T17:07:09.237752Z"
+    }
+   },
+   "outputs": [],
+   "source": [
+    "def Q_values(X, W1, W2, bias_W1, bias_W2):\n",
+    "    activation1 = np.dot(W1, X) + bias_W1\n",
+    "    out1 = 1 / (1 + np.exp(-activation1))\n",
+    "    activation2 = np.dot(W2, out1) + bias_W2\n",
+    "    Q = 1 / (1 + np.exp(-activation2))\n",
+    "#     print(\"out1.shape\",out1.shape)\n",
+    "    return Q, out1 #out,hidden activation\n",
+    "\n",
+    "\n",
+    "def EpsilonGreedy_Policy(epsilon,Q,a):\n",
+    "    if np.random.uniform(0,1) < epsilon:\n",
+    "        a_agent= a[np.random.randint(len(a))]\n",
+    "    else:\n",
+    "        allowed_Q=[]\n",
+    "        for act in a:\n",
+    "            allowed_Q.append(Q[act])\n",
+    "        best_index=np.argmax(allowed_Q)\n",
+    "        a_agent=a[best_index]\n",
+    "\n",
+    "    return a_agent"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 6,
+   "metadata": {
+    "execution": {
+     "iopub.execute_input": "2022-03-18T17:07:21.787215Z",
+     "iopub.status.busy": "2022-03-18T17:07:21.786653Z",
+     "iopub.status.idle": "2022-03-18T17:07:21.791104Z",
+     "shell.execute_reply": "2022-03-18T17:07:21.790113Z",
+     "shell.execute_reply.started": "2022-03-18T17:07:21.787175Z"
+    }
+   },
+   "outputs": [],
+   "source": [
+    "# import grogress bar\n",
+    "from time import sleep\n",
+    "from tqdm import tqdm"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 9,
+   "metadata": {
+    "execution": {
+     "iopub.execute_input": "2022-03-18T17:09:45.827028Z",
+     "iopub.status.busy": "2022-03-18T17:09:45.826658Z",
+     "iopub.status.idle": "2022-03-18T17:49:47.638974Z",
+     "shell.execute_reply": "2022-03-18T17:49:47.638252Z",
+     "shell.execute_reply.started": "2022-03-18T17:09:45.826990Z"
+    }
+   },
+   "outputs": [
+    {
+     "name": "stderr",
+     "output_type": "stream",
+     "text": [
+      "100%|██████████| 100000/100000 [40:01<00:00, 41.64it/s] \n"
+     ]
+    }
+   ],
+   "source": [
+    "# TRAINING LOOP BONE STRUCTURE...\n",
+    "# I WROTE FOR YOU A RANDOM AGENT (THE RANDOM AGENT WILL BE SLOWER TO GIVE CHECKMATE THAN AN OPTIMISED ONE, \n",
+    "# SO DON'T GET CONCERNED BY THE TIME IT TAKES), CHANGE WITH YOURS ...\n",
+    "\n",
+    "# for n in range(N_episodes):\n",
+    "for n in tqdm(range(N_episodes)):\n",
+    "    epsilon_f = epsilon_0 / (1 + beta * n)   ## DECAYING EPSILON\n",
+    "    Done=0                                   ## SET DONE TO ZERO (BEGINNING OF THE EPISODE)\n",
+    "    i = 1                                    ## COUNTER FOR NUMBER OF ACTIONS\n",
+    "    \n",
+    "    # return self.Board, X, allowed_a\n",
+    "    #allowed_a=np.concatenate([self.a_q1,self.a_k1],0)\n",
+    "    S,X,allowed_a=env.Initialise_game()      ## INITIALISE GAME\n",
+    "    \n",
+    "    while Done==0:                           ## START THE EPISODE\n",
+    "        \n",
+    "        \n",
+    "        ## THIS IS A RANDOM AGENT, CHANGE IT...\n",
+    "        a,_=np.where(allowed_a==1)\n",
+    "        \n",
+    "        # Find the Qvalues\n",
+    "        Q, out1 = Q_values(X, W1, W2, bias_W1, bias_W2)\n",
+    "        # Make an action\n",
+    "        a_agent = EpsilonGreedy_Policy(epsilon_f,Q, a)  \n",
+    "           \n",
+    "        #return self.Board, X, allowed_a, R, Done    \n",
+    "        S_next,X_next,allowed_a_next,R,Done=env.OneStep(a_agent)\n",
+    "        \n",
+    "        ## THE EPISODE HAS ENDED, UPDATE...BE CAREFUL, THIS IS THE LAST STEP OF THE EPISODE\n",
+    "        if Done==1:\n",
+    "        \n",
+    "            delta2 = (R - Q[a_agent]) * np.heaviside(Q[a_agent], 0)\n",
+    "            W2 +=eta * np.outer(delta2, out1)\n",
+    "            bias_W2 +=eta * delta2\n",
+    "\n",
+    "            delta1 = np.dot(W2[a_agent], delta2) * np.heaviside(out1, 0)\n",
+    "            W1 += eta * np.outer(delta1,X)\n",
+    "            bias_W1 += eta * delta1\n",
+    "\n",
+    "    \n",
+    "            #set the reward for the game\n",
+    "            R_save[n] = R\n",
+    "#             print(\"R\",R)\n",
+    "\n",
+    "            #exponential moving average of the reward R\n",
+    "            alpha = 1/10000\n",
+    "            if n > 0:\n",
+    "                R_save[n] = ((1-alpha) * R_save[n-1]) + (alpha*R_save[n])\n",
+    "\n",
+    "            #set the number of moves for the game\n",
+    "            N_moves_save[n] = N_moves_save[n]+1\n",
+    "            \n",
+    "            break\n",
+    "        \n",
+    "        # IF THE EPISODE IS NOT OVER...\n",
+    "        else:\n",
+    "            ## ONLY TO PUT SUMETHING\n",
+    "            #update v3\n",
+    "            #We have: S_next,X_next,allowed_a_next,R,Done\n",
+    "            # q-learning max\n",
+    "            Q_next, _ = Q_values(X_next, W1, W2, bias_W1, bias_W2)\n",
+    "            a,_=np.where(allowed_a_next==1)\n",
+    "            Q_max=max(Q_next[a])\n",
+    "\n",
+    "            \n",
+    "            delta2 = (R +gamma*Q_max- Q[a_agent]) * np.heaviside(Q[a_agent], 0)\n",
+    "            W2 +=eta * np.outer(delta2, out1)\n",
+    "            bias_W2 +=eta * delta2\n",
+    "            \n",
+    "            delta1 = np.dot(W2[a_agent], delta2) * np.heaviside(out1, 0)\n",
+    "            W1 += eta * np.outer(delta1,X)\n",
+    "            bias_W1 += eta * delta1\n",
+    "            \n",
+    "            \n",
+    "        # NEXT STATE AND CO. BECOME ACTUAL STATE...     \n",
+    "        S=np.copy(S_next)\n",
+    "        X=np.copy(X_next)\n",
+    "        allowed_a=np.copy(allowed_a_next)\n",
+    "        \n",
+    "        \n",
+    "        \n",
+    "        i += 1  # UPDATE COUNTER FOR NUMBER OF ACTIONS"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 10,
+   "metadata": {
+    "execution": {
+     "iopub.execute_input": "2022-03-18T17:50:07.287587Z",
+     "iopub.status.busy": "2022-03-18T17:50:07.287330Z",
+     "iopub.status.idle": "2022-03-18T17:50:07.507246Z",
+     "shell.execute_reply": "2022-03-18T17:50:07.506602Z",
+     "shell.execute_reply.started": "2022-03-18T17:50:07.287544Z"
+    }
+   },
+   "outputs": [
+    {
+     "data": {
+      "image/png": "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\n",
+      "text/plain": [
+       "<Figure size 432x288 with 1 Axes>"
+      ]
+     },
+     "metadata": {
+      "needs_background": "light"
+     },
+     "output_type": "display_data"
+    }
+   ],
+   "source": [
+    "plt.plot(R_save)\n",
+    "plt.xlabel('Episode Number')\n",
+    "plt.ylabel('Reward')\n",
+    "plt.show()"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": []
+  }
+ ],
+ "metadata": {
+  "kernelspec": {
+   "display_name": "Python 3",
+   "language": "python",
+   "name": "python3"
+  },
+  "language_info": {
+   "codemirror_mode": {
+    "name": "ipython",
+    "version": 3
+   },
+   "file_extension": ".py",
+   "mimetype": "text/x-python",
+   "name": "python",
+   "nbconvert_exporter": "python",
+   "pygments_lexer": "ipython3",
+   "version": "3.7.1"
+  }
+ },
+ "nbformat": 4,
+ "nbformat_minor": 4
+}
