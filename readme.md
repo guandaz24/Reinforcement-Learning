@@ -1,6 +1,6 @@
 ## Description of reproduction
 
-- `deep_q_learning_100000.ipynb`
+- `deep_q_learning.ipynb`
   
   The deep Q-learning implementation with original parameters and 100000 episodes
   
